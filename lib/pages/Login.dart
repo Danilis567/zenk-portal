@@ -162,7 +162,7 @@ class _LoginState extends State<Login> {
                     const SizedBox(height: 16),
                     Align(
                       alignment: Alignment.centerLeft, // Align text to the start
-                      child: InkWell(
+                      child: GestureDetector(
                         onTap: _navigateToResetPassword, // Navigate to reset password page
                         child: const Text(
                           "Şifremi unuttum",

@@ -13,9 +13,19 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData(useMaterial3: true),
+      theme: ThemeData(
+        useMaterial3: true,
+        primaryColor: Colors.orange, // Ana vurgu rengini turuncu yapıyoruz
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.orange,
+          primary: Colors.orange, // Ana renk olarak turuncu kullanıyoruz
+          secondary: Colors.amber, // İkinci rengimizi ayarlıyoruz, isteğe bağlı
+        ),
+
+
+      ),
       debugShowCheckedModeBanner: false,
-      home: Scaffold(body: Login()),
+      home: Scaffold(body: SafeArea(child: Home())),
     );
   }
 }
