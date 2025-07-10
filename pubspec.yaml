@@ -1,0 +1,56 @@
+name: zenk_app
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.8.1 <4.0.0' # SDK aralığını bu şekilde belirtmek daha sağlıklıdır
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  firebase_auth: ^5.6.1
+  cloud_firestore: ^5.6.11
+  provider: ^6.1.5
+  firebase_storage: ^12.4.9
+  image_picker: ^1.1.2
+  url_launcher: ^6.3.1
+  package_info_plus: ^8.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # HATA BURADAYDI: MAL HALİL
+  flutter_lints: ^5.0.0
+  flutter_native_splash: ^2.4.0
+
+
+# Bu blok dev_dependencies'in dışında ve onunla aynı hizada olmalı MAL
+flutter_native_splash:
+  # Aydınlık tema için arka plan rengi (Hex kodu)
+  color: "#FFFFFF"
+  # Karanlık tema için arka plan rengi
+  color_dark: "#121212"
+
+  # Aydınlık temada gösterilecek resmin yolu
+  image: assets/images/icon.png
+
+  # Opsiyonel: Karanlık tema için farklı bir logo göstermek isterseniz
+  # image_dark: assets/images/logo_dark.png
+
+  # Android 12 ve sonrası için özel ayarlar
+  android_12:
+    image: assets/images/icon.png
+    # image_dark: assets/images/logo_dark.png
+    color: "#FFFFFF"
+    color_dark: "#121212"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "628131412671",
+    "project_id": "zenk-portal",
+    "storage_bucket": "zenk-portal.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:628131412671:android:09065082b671fd3571a40a",
+        "android_client_info": {
+          "package_name": "com.example.zenk_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQMsHTmcL9krfqGBksKxIsb5mRmyroMJc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
