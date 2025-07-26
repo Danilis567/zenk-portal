@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:zenk_app/screens/add_order_screen.dart';
 import 'package:zenk_app/screens/add_stock_item_screen.dart';
+import 'package:zenk_app/screens/admin_analytics_screen.dart';
 import 'package:zenk_app/screens/orders_screen.dart';
 import 'package:zenk_app/screens/settings_screen.dart';
 import 'package:zenk_app/screens/stock_screen.dart';
@@ -20,43 +21,70 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // build metodu içinde tanımla ki her build'de yeniden hesaplansın
+    final bool isAdmin = widget.userRole == 'yönetici';
+
     if (kIsWeb) {
-      return buildDesktopLayout();
+      return buildDesktopLayout(isAdmin);
     } else {
-      return buildMobileLayout();
+      return buildMobileLayout(isAdmin);
     }
   }
 
-  Widget buildMobileLayout() {
-    final pages = [
+  Widget buildMobileLayout(bool isAdmin) {
+    final List<Widget> pages = [
       OrdersScreen(userRole: widget.userRole),
       const StockScreen(),
+      if (isAdmin) const AdminAnalyticsScreen(), // Yönetici ise ekle
       const SettingsScreen(),
+    ];
+
+    final List<BottomNavigationBarItem> navBarItems = [
+      const BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Siparişler'),
+      const BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), label: 'Stok'),
+      if (isAdmin) const BottomNavigationBarItem(icon: Icon(Icons.analytics_outlined), label: 'Analiz'), // Yönetici ise ekle
+      const BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Ayarlar'),
     ];
 
     return Scaffold(
       body: SafeArea(child: pages[_selectedIndex]),
       bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Siparişler'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.inventory_2_outlined), label: 'Stok'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.settings_outlined), label: 'Ayarlar'),
-        ],
+        items: navBarItems,
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.orange,
+        // Önemli: type'ı fixed yap ki 3'ten fazla item olunca kaybolmasın
+        type: BottomNavigationBarType.fixed,
         onTap: (index) => setState(() => _selectedIndex = index),
       ),
       floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
-  Widget buildDesktopLayout() {
-    final pages = [
+  Widget buildDesktopLayout(bool isAdmin) {
+    final List<Widget> pages = [
       OrdersScreen(userRole: widget.userRole),
       const StockScreen(),
+      if (isAdmin) const AdminAnalyticsScreen(), // Yönetici ise ekle
       const SettingsScreen(),
+    ];
+
+    final List<NavigationRailDestination> destinations = [
+      const NavigationRailDestination(
+          icon: Icon(Icons.list_alt_outlined),
+          selectedIcon: Icon(Icons.list_alt),
+          label: Text('Siparişler')),
+      const NavigationRailDestination(
+          icon: Icon(Icons.inventory_2_outlined),
+          selectedIcon: Icon(Icons.inventory_2),
+          label: Text('Stok')),
+      if (isAdmin) const NavigationRailDestination(
+          icon: Icon(Icons.analytics_outlined),
+          selectedIcon: Icon(Icons.analytics),
+          label: Text('Analiz')), // Yönetici ise ekle
+      const NavigationRailDestination(
+          icon: Icon(Icons.settings_outlined),
+          selectedIcon: Icon(Icons.settings),
+          label: Text('Ayarlar')),
     ];
 
     return Scaffold(
@@ -70,20 +98,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               padding: const EdgeInsets.symmetric(vertical: 20.0),
               child: _buildFloatingActionButton(),
             ),
-            destinations: const <NavigationRailDestination>[
-              NavigationRailDestination(
-                  icon: Icon(Icons.list_alt_outlined),
-                  selectedIcon: Icon(Icons.list_alt),
-                  label: Text('Siparişler')),
-              NavigationRailDestination(
-                  icon: Icon(Icons.inventory_2_outlined),
-                  selectedIcon: Icon(Icons.inventory_2),
-                  label: Text('Stok')),
-              NavigationRailDestination(
-                  icon: Icon(Icons.settings_outlined),
-                  selectedIcon: Icon(Icons.settings),
-                  label: Text('Ayarlar')),
-            ],
+            destinations: destinations,
           ),
           const VerticalDivider(thickness: 1, width: 1),
           Expanded(
@@ -100,7 +115,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget? _buildFloatingActionButton() {
-    if (widget.userRole != 'yönetici') return null;
+    // Artık _selectedIndex'e göre değil, bulunduğumuz sayfanın türüne göre
+    // karar vermek daha doğru olabilir ama şimdilik bu yapı yeterli.
+    // 'Analiz' sayfası için FAB olmayacak.
+    if (! (widget.userRole == 'yönetici')) return null;
+
+    final isAdminPage = (_selectedIndex == 2 && widget.userRole == 'yönetici');
+    if (isAdminPage) return null; // Analiz sayfasında FAB gösterme
 
     if (_selectedIndex == 0) {
       return FloatingActionButton(

@@ -19,6 +19,34 @@ class AuthService {
     }
   }
 
+  Future<List<QueryDocumentSnapshot>> getLoginLogsForDateRange({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final snapshot = await _db
+        .collection('login_logs')
+        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+        .where('timestamp', isLessThan: Timestamp.fromDate(endDate))
+        .orderBy('timestamp', descending: true)
+        .get();
+    return snapshot.docs;
+  }
+
+  Future<List<QueryDocumentSnapshot>> getDailyLoginLogs() async {
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    final endOfToday = startOfToday.add(const Duration(days: 1));
+
+    final snapshot = await _db
+        .collection('login_logs')
+        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
+        .where('timestamp', isLessThan: Timestamp.fromDate(endOfToday))
+        .orderBy('timestamp', descending: true)
+        .get();
+
+    return snapshot.docs;
+  }
+
   Future<void> logLoginEvent(String email) {
     return _db.collection('login_logs').add({
       'email': email,

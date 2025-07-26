@@ -1,4 +1,5 @@
-// lib/services/firestore_service.dart
+// lib/services/firestore_service.dart (YENİ HALİ)
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:zenk_app/models/order_model.dart';
@@ -9,7 +10,81 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  // --- YENİ VE GELİŞMİŞ ANALİZ FONKSİYONLARI ---
 
+  Future<Map<String, dynamic>> getAnalyticsForDateRange({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    // 1. Sipariş İstatistikleri
+    final ordersSnapshot = await _db.collection('orders').get();
+    int newInRange = 0;
+    int completedInRange = 0;
+    Map<String, int> stockUsageInRange = {};
+
+    for (var doc in ordersSnapshot.docs) {
+      final order = OrderModel.fromFirestore(doc);
+      final createdAt = order.createdAt.toDate();
+
+      // Oluşturulan siparişleri say
+      if (createdAt.isAfter(startDate) && createdAt.isBefore(endDate)) {
+        newInRange++;
+        // Stok kullanımını hesapla
+        for (var component in order.requiredComponents) {
+          stockUsageInRange.update(
+            component.itemName,
+                (value) => value + component.quantityUsed,
+            ifAbsent: () => component.quantityUsed,
+          );
+        }
+      }
+
+      // Tamamlanan siparişleri say
+      if (order.status == 'tamamlandi') {
+        final completionEntry = order.statusHistory.lastWhere(
+                (h) => h.status == 'tamamlandi',
+            orElse: () => StatusHistoryItem(status: '', timestamp: Timestamp(0, 0)));
+        if (completionEntry.status.isNotEmpty) {
+          final completionDate = completionEntry.timestamp.toDate();
+          if (completionDate.isAfter(startDate) && completionDate.isBefore(endDate)) {
+            completedInRange++;
+          }
+        }
+      }
+    }
+
+    // 2. İptal Edilen Siparişler
+    final cancelledOrdersSnapshot = await _db
+        .collection('cancelled_orders')
+        .where('cancelledAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+        .where('cancelledAt', isLessThan: Timestamp.fromDate(endDate))
+        .get();
+    final int cancelledInRange = cancelledOrdersSnapshot.docs.length;
+
+    return {
+      'newOrders': newInRange,
+      'completedOrders': completedInRange,
+      'cancelledOrders': cancelledInRange,
+      'stockUsage': stockUsageInRange,
+    };
+  }
+
+  Future<List<QueryDocumentSnapshot>> getLoginLogsForDateRange({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final snapshot = await _db
+        .collection('login_logs')
+        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+        .where('timestamp', isLessThan: Timestamp.fromDate(endDate))
+        .orderBy('timestamp', descending: true)
+        .get();
+    return snapshot.docs;
+  }
+
+  // --- DİĞER TÜM FONKSİYONLARINIZ BURADA AYNI ŞEKİLDE DEVAM EDİYOR ---
+  // ... (getUserData, getOrdersStream, createOrderAndUpdateStock vb. hepsi burada kalacak)
+  // ... (Bu fonksiyonları silmeyin, sadece yukarıdaki yeni fonksiyonları ekleyin/değiştirin)
 
   Future<UserModel?> getUserData(String uid) async {
     try {
@@ -26,23 +101,27 @@ class FirestoreService {
 
 
 
-  Stream<List<OrderModel>> getOrdersStream(
-      {required List<String> statuses, String? searchQuery}) {
-    Query query;
+  Stream<List<OrderModel>> getOrdersStream({required List<String> statuses, String? searchQuery}) {
+    Query query = _db
+        .collection('orders')
+        .where('status', whereIn: statuses);
+
     if (searchQuery != null && searchQuery.isNotEmpty) {
       String lowerCaseQuery = searchQuery.toLowerCase();
-      query = _db
-          .collection('orders')
+      query = query
           .where('customerName_lowercase', isGreaterThanOrEqualTo: lowerCaseQuery)
-          .where('customerName_lowercase', isLessThanOrEqualTo: '$lowerCaseQuery\uf8ff')
-          .orderBy('customerName_lowercase')
-          .orderBy('createdAt', descending: true);
+          .where('customerName_lowercase', isLessThanOrEqualTo: '$lowerCaseQuery\uf8ff');
+
+      // --- ANA DEĞİŞİKLİK BURADA ---
+      // Arama yapıldığında, sıralamayı da önce arama alanına, sonra tarihe göre yapalım.
+      // Bu, Firestore için daha verimli bir sorgudur.
+      query = query.orderBy('customerName_lowercase').orderBy('createdAt', descending: true);
+
     } else {
-      query = _db
-          .collection('orders')
-          .where('status', whereIn: statuses)
-          .orderBy('createdAt', descending: true);
+      // Arama yapılmıyorsa, eskisi gibi sadece tarihe göre sırala.
+      query = query.orderBy('createdAt', descending: true);
     }
+
     return query.snapshots().map((snapshot) =>
         snapshot.docs.map((doc) => OrderModel.fromFirestore(doc)).toList());
   }
@@ -239,6 +318,4 @@ class FirestoreService {
       return null;
     }
   }
-
-
 }
