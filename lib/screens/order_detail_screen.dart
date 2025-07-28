@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // YENİ: Firebase Auth importu eklendi
 import 'package:zenk_app/models/order_model.dart';
 import 'package:zenk_app/services/firestore_service.dart';
 
@@ -22,10 +23,36 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     'kargoya_hazir'
   ];
 
+  // YENİ: Kullanıcı rolünü ve yüklenme durumunu tutacak state değişkenleri
+  bool _isRoleLoading = true;
+  String? _currentUserRole;
+
   @override
   void initState() {
     super.initState();
     _selectedStatus = widget.order.status;
+    _fetchCurrentUserRole(); // Ekran açılırken kullanıcının rolünü al
+  }
+
+  // YENİ: Mevcut kullanıcının rolünü Firestore'dan çeken fonksiyon
+  Future<void> _fetchCurrentUserRole() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userModel = await _firestoreService.getUserData(user.uid);
+      if (mounted) {
+        setState(() {
+          _currentUserRole = userModel?.role;
+          _isRoleLoading = false;
+        });
+      }
+    } else {
+      // Kullanıcı giriş yapmamışsa rolü yok demektir.
+      if (mounted) {
+        setState(() {
+          _isRoleLoading = false;
+        });
+      }
+    }
   }
 
   String _formatStatusString(String status) {
@@ -127,6 +154,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Widget build(BuildContext context) {
     final finalProduct = widget.order.finalProduct;
     final bool isActionable = widget.order.status != 'tamamlandi';
+    
+    // YENİ: Kullanıcının yönetici olup olmadığını kontrol et
+    final bool isYonetici = _currentUserRole == 'yönetici';
 
     Widget content = SingleChildScrollView(
       padding: const EdgeInsets.all(12.0),
@@ -265,7 +295,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
               ),
             ),
-          if (isActionable)
+          
+          // --- DEĞİŞİKLİK BURADA ---
+          // İptal Et butonunu sadece yönetici ise ve rol bilgisi yüklendiyse göster
+          if (isActionable && !_isRoleLoading && isYonetici)
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
