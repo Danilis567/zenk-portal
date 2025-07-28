@@ -1,10 +1,9 @@
-// lib/screens/admin_analytics_screen.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:zenk_app/services/auth_service.dart';
+// Gerekliyse auth_service.dart importunu ekleyin
+// import 'package:zenk_app/services/auth_service.dart'; 
 import 'package:zenk_app/services/firestore_service.dart';
 
 enum AnalyticsView { daily, weekly }
@@ -18,7 +17,7 @@ class AdminAnalyticsScreen extends StatefulWidget {
 
 class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
   final FirestoreService _firestoreService = FirestoreService();
-  final AuthService _authService = AuthService();
+  // final AuthService _authService = AuthService(); // Eğer kullanıyorsanız bu satırı açın
 
   late Future<Map<String, dynamic>> _analyticsData;
   DateTime _selectedDate = DateTime.now();
@@ -51,13 +50,13 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
   }
 
   Future<Map<String, dynamic>> _fetchAnalyticsData(DateTime startDate, DateTime endDate) async {
-    final results = await Future.wait([
-      _firestoreService.getAnalyticsForDateRange(startDate: startDate, endDate: endDate),
-      _authService.getLoginLogsForDateRange(startDate: startDate, endDate: endDate),
-    ]);
+    // auth_service'i kullanmıyorsanız, bu kısmı basitleştirebiliriz.
+    // Şimdilik sadece firestore_service'i çağıracak şekilde bırakıyorum.
+    // Eğer login log'ları da alıyorsanız, önceki Future.wait yapısı doğrudur.
+    final stats = await _firestoreService.getAnalyticsForDateRange(startDate: startDate, endDate: endDate);
     return {
-      'stats': results[0],
-      'loginLogs': results[1],
+      'stats': stats,
+      // 'loginLogs': [], // Gerekliyse login log'larını da burada alın
     };
   }
 
@@ -83,7 +82,6 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
       return f.format(_selectedDate);
     } else {
       final range = _getDateRangeForSelection();
-      // Tarih formatı düzeltildi
       final String startFormatted = DateFormat.Md('tr_TR').format(range['start']!);
       final String endFormatted = f.format(range['end']!.subtract(const Duration(days: 1)));
       return '$startFormatted - $endFormatted';
@@ -132,9 +130,18 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
+                  // --- HATA GÖSTERİMİ İYİLEŞTİRİLDİ ---
+                  String errorMessage = snapshot.error.toString();
+                  if (errorMessage.contains('permission-denied')) {
+                    errorMessage = 'İzin reddedildi.\n\nBu ekranı görüntülemek için "yönetici" rolüne sahip olmanız gerekmektedir. Lütfen kullanıcı rolünüzü kontrol edin.';
+                  } else if (errorMessage.contains('failed-precondition')) {
+                     errorMessage = 'Gerekli veritabanı indeksi eksik.\n\nLütfen hata mesajındaki linke tıklayarak Firebase konsolunda gerekli indeksi oluşturun.';
+                  } else {
+                     errorMessage = 'Beklenmedik bir hata oluştu:\n$errorMessage';
+                  }
                   return Center(child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Text('Bir hata oluştu:\n${snapshot.error}', textAlign: TextAlign.center),
+                    child: Text(errorMessage, textAlign: TextAlign.center),
                   ));
                 }
                 if (!snapshot.hasData || snapshot.data == null) {
@@ -143,7 +150,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
 
                 final stats = snapshot.data!['stats'] as Map<String, dynamic>;
                 final stockUsage = stats['stockUsage'] as Map<String, int>;
-                final loginLogs = snapshot.data!['loginLogs'] as List<QueryDocumentSnapshot>;
+                // final loginLogs = snapshot.data!['loginLogs'] as List<QueryDocumentSnapshot>;
 
                 return RefreshIndicator(
                   onRefresh: () async => _loadDataForSelection(),
@@ -157,7 +164,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
                         const SizedBox(height: 20),
                         _buildStockUsageCard(stockUsage),
                         const SizedBox(height: 20),
-                        _buildLoginLogsCard(loginLogs),
+                        // _buildLoginLogsCard(loginLogs), // Gerekliyse bu satırı açın
                       ],
                     ),
                   ),
@@ -230,8 +237,8 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
                 child: BarChart(
                   BarChartData(
                     maxY: (stockUsage.values.isNotEmpty
-                        ? stockUsage.values.reduce((a, b) => a > b ? a : b)
-                        : 10) * 1.2,
+                            ? stockUsage.values.reduce((a, b) => a > b ? a : b)
+                            : 10) * 1.2,
                     alignment: BarChartAlignment.spaceAround,
                     barTouchData: BarTouchData(
                       touchTooltipData: BarTouchTooltipData(
